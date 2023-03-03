@@ -27,10 +27,10 @@ class UI:
         self.url_txt.set("")
         self.db.save_url(url)
         item = {'url': url, 'status': None, 'elapsed': None}
-        self.list.append(item)
         tableEntry = self.treeview.insert(
             "", tk.END, text=url, values=(None, None))
         self.table_entries.append(tableEntry)
+        self.list.append(item)
         data = self.fetch(item)
         self.update_table_entry((len(self.list)-1, data), self.db)
 
@@ -85,12 +85,6 @@ class UI:
             item["status"], item['elapsed']))
         logging.info("Updated %s", item['url'])
 
-    def consumer(self, event: ThreadEvent, queue: Queue):
-        db = DB("pinged.db")
-        while not event.is_set() or not queue.empty():
-            item = queue.get()
-            self.update_table_entry(item, db)
-
     def fetch(self, item: dict):
         url = item['url']
         try:
@@ -103,6 +97,12 @@ class UI:
         except:
             return {'url': url, 'elapsed': None, 'status': 404}
 
+    def consumer(self, event: ThreadEvent, queue: Queue):
+        db = DB("pinged.db")
+        while not event.is_set() or not queue.empty():
+            item = queue.get()
+            self.update_table_entry(item, db)
+
     def producer(self, queue: Queue):
         while True:
             for index, item in enumerate(self.list):
@@ -114,7 +114,6 @@ class UI:
         format = "%(asctime)s: %(message)s"
         logging.basicConfig(format=format, level=logging.INFO,
                             datefmt="%H:%M:%S")
-        logging.info('help')
         pipeline = Queue(maxsize=10)
         event = ThreadEvent()
         threading.Thread(target=self.producer, args=(
